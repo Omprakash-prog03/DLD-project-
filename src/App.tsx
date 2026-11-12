@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from './store/useAppStore';
-import { EditorialLayout } from './components/common/EditorialLayout';
+import { DesktopLayout } from './components/desktop/DesktopLayout';
 
 export const App: React.FC = () => {
   const { tickClock, loadAlarms, refreshDeviceStatus, refreshDeviceTime } = useAppStore();
@@ -27,7 +27,7 @@ export const App: React.FC = () => {
     };
   }, [tickClock, loadAlarms, refreshDeviceStatus, refreshDeviceTime]);
 
-  return <EditorialLayout />;
+  return <DesktopLayout />;
 };
 
 export default App;

@@ -11,6 +11,8 @@ interface AppState {
   activeTab: NavigationTab;
   isAlarmCreatorOpen: boolean;
   editingAlarm: Alarm | null;
+  isTimeEditorOpen: boolean;
+  isDeviceModalOpen: boolean;
   timeFormat: TimeFormat;
   theme: 'light' | 'dark';
   desktopViewMode: 'editorial-frame' | 'responsive';
@@ -37,6 +39,8 @@ interface AppState {
   setActiveTab: (tab: NavigationTab) => void;
   openAlarmCreator: (alarm?: Alarm) => void;
   closeAlarmCreator: () => void;
+  setIsTimeEditorOpen: (open: boolean) => void;
+  setIsDeviceModalOpen: (open: boolean) => void;
   setTimeFormat: (format: TimeFormat) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   setDesktopViewMode: (mode: 'editorial-frame' | 'responsive') => void;
@@ -87,9 +91,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeTab: 'dashboard',
   isAlarmCreatorOpen: false,
   editingAlarm: null,
+  isTimeEditorOpen: false,
+  isDeviceModalOpen: false,
   timeFormat: '24h',
   theme: 'light',
-  desktopViewMode: 'editorial-frame',
+  desktopViewMode: 'responsive',
 
   currentTime: initialTime(),
   isClockRunning: true,
@@ -119,6 +125,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isGameActive: false,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  setIsTimeEditorOpen: (open) => set({ isTimeEditorOpen: open }),
+
+  setIsDeviceModalOpen: (open) => set({ isDeviceModalOpen: open }),
 
   openAlarmCreator: (alarm) =>
     set({

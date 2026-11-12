@@ -31,8 +31,11 @@ Designed with an Apple-inspired editorial aesthetic matching the reference story
    - Read and calibrate hardware RTC registers.
    - CD4518 BCD counter sync pulse generator on GPIO 26.
 
-5. **Aesthetic & Theme:**
-   - Editorial presentation layout with desktop phone-frame presentation + full responsive mobile view.
+5. **Desktop-First Editorial Layout:**
+   - Two-column balanced desktop composition (1440 × 900 target viewport).
+   - Left Column: Current Time with oversized lightweight numerical typography, calendar date, time source badge, and the distinctive vertical scrolling time selector when editing.
+   - Right Column: Your Alarms list with clean horizontal entries separated by subtle dividers, quick toggles, edit/delete actions, and a minimal + Add Alarm modal.
+   - Minimal Horizontal Header: `TIME / CLOCK` mark on the left; connection status indicator, buzzer test, and settings on the right.
    - Warm neutral palette: Light Warm Grey (`#E8E7E1`), Secondary Surface (`#F2F1EC`), Text (`#171717`), Accent Yellow (`#E9D82C`).
    - Industrial Dark Mode toggle (`#171715` / `#22221F`).
 
