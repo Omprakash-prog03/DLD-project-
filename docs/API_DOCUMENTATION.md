@@ -1,32 +1,58 @@
-# ESP32 Digital Clock & Smart Alarm — REST API Documentation
+# ESP32 Digital Clock & Smart Alarm — REST API Specification
 
-This document describes the exact HTTP REST API contract implemented by the ESP32 firmware and consumed by the web control interface.
-
----
-
-## Base URL
-
-- **ESP32 Access Point (SoftAP):** `http://192.168.4.1` (Port 80)
-- **ESP32 Wi-Fi Station (Home LAN):** `http://<ASSIGNED_DHCP_IP>`
-
-All requests and responses use `Content-Type: application/json`.
-CORS headers (`Access-Control-Allow-Origin: *`) are served on every endpoint.
+This document defines the complete JSON REST API contract shared between the frontend web control interface and the ESP32 firmware (`firmware/esp32_smart_alarm/esp32_smart_alarm.ino`).
 
 ---
 
-## 1. Device Status
+## 1. Network & Protocol Standards
 
-### `GET /api/status`
+- **Protocols:** HTTP/1.1 REST API, JSON request/response payloads.
+- **Default Endpoints:**
+  - **ESP32 Access Point (SoftAP):** `http://192.168.4.1:80`
+  - **ESP32 Wi-Fi Station (Local LAN):** `http://<DHCP_IP>:80`
+- **CORS Headers:** Served on every request:
+  - `Access-Control-Allow-Origin: *`
+  - `Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS`
+  - `Access-Control-Allow-Headers: Content-Type, Authorization`
+- **Timezone:** Standardized on `Asia/Kolkata` (UTC+5:30).
+
+---
+
+## 2. Standard Response Format
+
+### Success Response:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": { ... }
+}
+```
+
+### Error Response:
+```json
+{
+  "success": false,
+  "message": "Specific error description"
+}
+```
+
+---
+
+## 3. Endpoints
+
+### 3.1 Device Status
+#### `GET /api/status`
 Returns general operational status, connected peripheral detection, and memory telemetry.
 
-#### Response (200 OK):
+**Response (200 OK):**
 ```json
 {
   "connected": true,
   "device": "ESP32-WROOM-32",
   "clockSource": "DS3231",
   "rtcStatus": "available",
-  "alarmCount": 3,
+  "alarmCount": 2,
   "buzzerStatus": false,
   "firmwareVersion": "1.2.0",
   "uptime": 1420,
@@ -38,12 +64,12 @@ Returns general operational status, connected peripheral detection, and memory t
 
 ---
 
-## 2. Real-Time Clock (DS3231)
+### 3.2 Real-Time Clock (DS3231)
 
-### `GET /api/time`
+#### `GET /api/time`
 Reads the authoritative current date and time from the DS3231 RTC registers over I2C.
 
-#### Response (200 OK):
+**Response (200 OK):**
 ```json
 {
   "hour": 22,
@@ -57,10 +83,10 @@ Reads the authoritative current date and time from the DS3231 RTC registers over
 }
 ```
 
-### `POST /api/time`
-Updates the DS3231 RTC registers and pulses the CD4518 digital counters synchronization pin (GPIO 26).
+#### `POST /api/time`
+Validates and writes new date/time registers into the DS3231 RTC, then pulses GPIO 26 to synchronize the CD4518 BCD counters.
 
-#### Request Body:
+**Request Payload:**
 ```json
 {
   "hour": 9,
@@ -72,22 +98,30 @@ Updates the DS3231 RTC registers and pulses the CD4518 digital counters synchron
 }
 ```
 
-#### Response (200 OK):
+**Success Response (200 OK):**
 ```json
 {
   "success": true,
-  "message": "Time updated on DS3231 RTC"
+  "message": "Time successfully updated on DS3231 RTC"
+}
+```
+
+**Validation Error Response (400 Bad Request):**
+```json
+{
+  "success": false,
+  "message": "Day must be between 1 and 30 for month 11"
 }
 ```
 
 ---
 
-## 3. Alarm Management
+### 3.3 Alarm Management
 
-### `GET /api/alarms`
-Returns all configured alarms stored persistently in ESP32 NVS flash.
+#### `GET /api/alarms`
+Returns all configured alarms stored persistently in ESP32 non-volatile storage (NVS).
 
-#### Response (200 OK):
+**Response (200 OK):**
 ```json
 [
   {
@@ -106,33 +140,51 @@ Returns all configured alarms stored persistently in ESP32 NVS flash.
     "soundId": "buzzer-standard",
     "snoozeDuration": 10,
     "wakeUpMission": true
+  },
+  {
+    "id": "alarm-02",
+    "title": "Focus Block",
+    "description": "Hardware circuit testing",
+    "hour": 9,
+    "minute": 50,
+    "second": 0,
+    "enabled": true,
+    "repeat": {
+      "type": "daily",
+      "days": [0, 1, 2, 3, 4, 5, 6]
+    },
+    "date": null,
+    "soundId": "buzzer-pulsed",
+    "snoozeDuration": 5,
+    "wakeUpMission": true
   }
 ]
 ```
 
-### `POST /api/alarms`
-Creates a new hardware alarm.
+#### `POST /api/alarms`
+Creates a new hardware alarm in ESP32 flash memory.
 
-#### Request Body:
+**Request Payload:**
 ```json
 {
-  "title": "Focus Block",
-  "description": "Lab testing",
-  "hour": 9,
-  "minute": 50,
+  "title": "Evening Review",
+  "description": "Log circuit telemetry",
+  "hour": 22,
+  "minute": 30,
   "second": 0,
   "enabled": true,
   "repeat": {
-    "type": "daily",
-    "days": [0, 1, 2, 3, 4, 5, 6]
+    "type": "custom",
+    "days": [1, 3, 5]
   },
-  "soundId": "buzzer-pulsed",
-  "snoozeDuration": 5,
-  "wakeUpMission": true
+  "soundId": "buzzer-gentle",
+  "snoozeDuration": 15,
+  "wakeUpMission": false,
+  "date": null
 }
 ```
 
-#### Response (201 Created):
+**Response (201 Created):**
 ```json
 {
   "success": true,
@@ -140,19 +192,57 @@ Creates a new hardware alarm.
 }
 ```
 
-### `PUT /api/alarms/{id}`
-Updates an existing alarm in ESP32 flash memory.
+#### `PUT /api/alarms/{id}`
+Updates an existing alarm in ESP32 NVS.
 
-### `DELETE /api/alarms/{id}`
+**Request Payload:**
+```json
+{
+  "title": "Updated Alarm Name",
+  "hour": 8,
+  "minute": 15,
+  "enabled": true,
+  "repeat": {
+    "type": "daily",
+    "days": [0, 1, 2, 3, 4, 5, 6]
+  }
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Alarm updated"
+}
+```
+
+#### `DELETE /api/alarms/{id}`
 Deletes an alarm from memory.
 
-### `POST /api/alarms/{id}/toggle`
-Enables or disables an alarm without removing its schedule.
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Alarm deleted"
+}
+```
 
-### `POST /api/alarms/{id}/dismiss`
+#### `POST /api/alarms/{id}/toggle`
+Toggles an alarm's enabled state between `true` and `false`.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Alarm state toggled"
+}
+```
+
+#### `POST /api/alarms/{id}/dismiss`
 Silences an active ringing hardware buzzer.
 
-#### Response (200 OK):
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -162,15 +252,15 @@ Silences an active ringing hardware buzzer.
 
 ---
 
-## 4. Diagnostics & Hardware Health
+### 3.4 Hardware Diagnostics & Health
 
-### `GET /api/device/health`
-Returns hardware diagnostics including I2C bus scan, internal die temperature, and logic gate integrity.
+#### `GET /api/device/health`
+Returns hardware diagnostics including I2C bus scan, internal die temperature, logic gate status, and GPIO pin configuration.
 
-#### Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-  "wifiStatus": "AP_RUNNING",
+  "wifiStatus": "AP",
   "rtcAvailable": true,
   "temperatureCelsius": 26.75,
   "buzzerStatus": false,
@@ -178,6 +268,15 @@ Returns hardware diagnostics including I2C bus scan, internal die temperature, a
   "freeHeap": 184520,
   "ne555Freq": 1.0,
   "cd4518CounterSync": true,
+  "logicGatesStatus": "3.3V to 5.0V 74HCT245 Bus Buffer Active",
+  "gpioConfig": {
+    "buzzerPin": 25,
+    "i2cSdaPin": 21,
+    "i2cSclPin": 22,
+    "counterSyncPin": 26,
+    "counterResetPin": 27,
+    "ppsInterruptPin": 34
+  },
   "i2cScan": [
     "0x68 (DS3231 RTC)",
     "0x57 (AT24C32 EEPROM)"
@@ -185,5 +284,13 @@ Returns hardware diagnostics including I2C bus scan, internal die temperature, a
 }
 ```
 
-### `POST /api/device/buzzer-test`
+#### `POST /api/device/buzzer-test`
 Sends a short test pulse (800ms, 2.4kHz PWM) to GPIO 25.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Buzzer test triggered (800ms PWM)"
+}
+```

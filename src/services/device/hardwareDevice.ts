@@ -1,17 +1,20 @@
 import { Alarm, ClockTime, DeviceStatus, DiagnosticsData, IDeviceService, SoundType } from '../../types';
+import { DEFAULT_NETWORK_CONFIG } from '../../config/deviceConfig';
 
 export class HardwareDevice implements IDeviceService {
   private ipAddress: string;
   private port: number;
-  private timeoutMs: number = 4000;
+  private timeoutMs: number;
   private lastKnownStatus: DeviceStatus | null = null;
+  private isCurrentlyConnected: boolean = false;
 
-  constructor(ipAddress: string = '192.168.4.1', port: number = 80) {
+  constructor(ipAddress: string = DEFAULT_NETWORK_CONFIG.defaultApIp, port: number = DEFAULT_NETWORK_CONFIG.defaultPort) {
     this.ipAddress = ipAddress.trim();
     this.port = port;
+    this.timeoutMs = DEFAULT_NETWORK_CONFIG.timeoutMs;
   }
 
-  public setConnection(ip: string, port: number = 80): void {
+  public setConnection(ip: string, port: number = DEFAULT_NETWORK_CONFIG.defaultPort): void {
     this.ipAddress = ip.trim();
     this.port = port;
   }
@@ -20,13 +23,30 @@ export class HardwareDevice implements IDeviceService {
     return this.ipAddress;
   }
 
+  public getLastKnownStatus(): DeviceStatus | null {
+    return this.lastKnownStatus;
+  }
+
+  public isConnected(): boolean {
+    return this.isCurrentlyConnected;
+  }
+
   private getBaseUrl(): string {
-    const cleanIp = this.ipAddress.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    return `http://${cleanIp}${this.port !== 80 ? `:${this.port}` : ''}`;
+    let clean = this.ipAddress.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    // Validate IP format
+    const ipRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
+    const isHostname = clean.includes('.local') || clean === 'localhost';
+
+    if (!ipRegex.test(clean) && !isHostname) {
+      throw new Error(`Invalid IP address format: "${this.ipAddress}". Expected e.g. 192.168.4.1`);
+    }
+
+    return `http://${clean}${this.port !== 80 ? `:${this.port}` : ''}`;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.getBaseUrl()}${endpoint}`;
+    const baseUrl = this.getBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -44,40 +64,61 @@ export class HardwareDevice implements IDeviceService {
       clearTimeout(timer);
 
       if (!response.ok) {
-        let errorMsg = `HTTP Error ${response.status}: ${response.statusText}`;
+        let errorMsg = `ESP32 returned HTTP ${response.status}: ${response.statusText}`;
         try {
           const errBody = await response.json();
           if (errBody?.message) errorMsg = errBody.message;
         } catch {
-          // ignore json parse error on non-json error response
+          // non-JSON error
         }
         throw new Error(errorMsg);
       }
 
       const json = await response.json();
+      this.isCurrentlyConnected = true;
       return json;
     } catch (err: unknown) {
       clearTimeout(timer);
+      this.isCurrentlyConnected = false;
+
       const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
 
       if (err instanceof Error) {
         if (err.name === 'AbortError') {
-          throw new Error(`Connection timeout: ESP32 at ${this.ipAddress} did not respond within ${this.timeoutMs}ms.`);
+          throw new Error(`Device communication timeout: ESP32 at ${this.ipAddress} did not respond within ${this.timeoutMs}ms.`);
         }
         if (isHttps && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
           throw new Error(
-            `Mixed-Content Block: Deployed HTTPS site cannot directly reach local HTTP (${this.ipAddress}). Connect to ESP32 Wi-Fi AP or serve web app via local HTTP.`
+            `Browser Mixed-Content Block: Deployed HTTPS site cannot issue direct HTTP calls to local IP ${this.ipAddress}. Connect via local HTTP or run standalone simulation mode.`
           );
         }
         throw err;
       }
-      throw new Error('Unknown network communication failure with ESP32');
+      throw new Error('Unknown hardware communication failure with ESP32');
     }
+  }
+
+  /**
+   * Safe request with retry for idempotent GET requests only.
+   */
+  private async requestWithRetry<T>(endpoint: string, retries: number = 2): Promise<T> {
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await this.request<T>(endpoint, { method: 'GET' });
+      } catch (err) {
+        lastErr = err instanceof Error ? err : new Error(String(err));
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 200 * Math.pow(2, attempt)));
+        }
+      }
+    }
+    throw lastErr;
   }
 
   public async getStatus(): Promise<DeviceStatus> {
     try {
-      const data = await this.request<{
+      const data = await this.requestWithRetry<{
         connected: boolean;
         device: string;
         clockSource: string;
@@ -90,22 +131,22 @@ export class HardwareDevice implements IDeviceService {
         rssi?: number;
         uptime?: number;
         freeHeap?: number;
-      }>('/api/status');
+      }>('/api/status', 1);
 
       const status: DeviceStatus = {
-        connected: data.connected !== false,
+        connected: true,
         deviceName: data.device || 'ESP32-WROOM-32',
         ipAddress: this.ipAddress,
         clockSource: (data.clockSource as any) || 'DS3231',
         rtcAvailable: data.rtcStatus === 'available' || data.rtcStatus === 'OK',
-        firmwareVersion: data.firmwareVersion || '1.0.0',
+        firmwareVersion: data.firmwareVersion || '1.2.0',
         lastSeen: new Date().toISOString(),
         lastSync: new Date().toISOString(),
-        buzzerActive: !!data.buzzerStatus,
+        buzzerActive: Boolean(data.buzzerStatus),
         operatingMode: 'hardware',
         connectionState: 'connected',
         wifiMode: data.wifiMode || 'AP',
-        wifiSSID: data.wifiSSID,
+        wifiSSID: data.wifiSSID || DEFAULT_NETWORK_CONFIG.defaultApSsid,
         rssi: data.rssi,
         uptimeSeconds: data.uptime,
         freeHeap: data.freeHeap,
@@ -115,12 +156,14 @@ export class HardwareDevice implements IDeviceService {
       return status;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+
+      // Report last known status separately from current disconnected state
       return {
         connected: false,
-        deviceName: 'ESP32-WROOM-32',
+        deviceName: this.lastKnownStatus?.deviceName || 'ESP32-WROOM-32',
         ipAddress: this.ipAddress,
-        clockSource: 'DS3231',
-        rtcAvailable: false,
+        clockSource: this.lastKnownStatus?.clockSource || 'DS3231',
+        rtcAvailable: false, // Never falsely report hardware as detected when disconnected!
         firmwareVersion: this.lastKnownStatus?.firmwareVersion || 'Unknown',
         lastSeen: this.lastKnownStatus?.lastSeen || null,
         lastSync: this.lastKnownStatus?.lastSync || null,
@@ -133,7 +176,7 @@ export class HardwareDevice implements IDeviceService {
   }
 
   public async getTime(): Promise<ClockTime> {
-    const data = await this.request<{
+    const data = await this.requestWithRetry<{
       hour: number;
       minute: number;
       second: number;
@@ -142,28 +185,42 @@ export class HardwareDevice implements IDeviceService {
       year: number;
       source: string;
       timezone?: string;
-    }>('/api/time');
+    }>('/api/time', 1);
 
     return {
-      hour: data.hour,
-      minute: data.minute,
-      second: data.second,
-      day: data.day,
-      month: data.month,
-      year: data.year,
+      hour: Number(data.hour),
+      minute: Number(data.minute),
+      second: Number(data.second),
+      day: Number(data.day),
+      month: Number(data.month),
+      year: Number(data.year),
       source: (data.source as any) || 'DS3231',
-      timezone: data.timezone || 'Asia/Kolkata',
+      timezone: data.timezone || DEFAULT_NETWORK_CONFIG.timezone,
     };
   }
 
   public async setTime(time: Partial<ClockTime>): Promise<{ success: boolean; message: string }> {
+    // Frontend validation before issuing hardware command
+    if (time.hour !== undefined && (time.hour < 0 || time.hour > 23)) {
+      throw new Error(`Invalid hour value: ${time.hour}. Must be 0-23.`);
+    }
+    if (time.minute !== undefined && (time.minute < 0 || time.minute > 59)) {
+      throw new Error(`Invalid minute value: ${time.minute}. Must be 0-59.`);
+    }
+    if (time.second !== undefined && (time.second < 0 || time.second > 59)) {
+      throw new Error(`Invalid second value: ${time.second}. Must be 0-59.`);
+    }
+    if (time.month !== undefined && (time.month < 1 || time.month > 12)) {
+      throw new Error(`Invalid month: ${time.month}. Must be 1-12.`);
+    }
+
     const payload = {
-      hour: time.hour,
-      minute: time.minute,
+      hour: time.hour ?? 0,
+      minute: time.minute ?? 0,
       second: time.second ?? 0,
-      day: time.day,
-      month: time.month,
-      year: time.year,
+      day: time.day ?? 1,
+      month: time.month ?? 1,
+      year: time.year ?? 2026,
     };
 
     const res = await this.request<{ success: boolean; message: string }>('/api/time', {
@@ -173,13 +230,13 @@ export class HardwareDevice implements IDeviceService {
 
     return {
       success: res.success !== false,
-      message: res.message || 'Time updated on ESP32 & DS3231',
+      message: res.message || 'Time updated on ESP32 & DS3231 RTC',
     };
   }
 
   public async getAlarms(): Promise<Alarm[]> {
-    const alarms = await this.request<any[]>('/api/alarms');
-    // Normalize format
+    const alarms = await this.requestWithRetry<any[]>('/api/alarms', 1);
+
     return alarms.map((a) => ({
       id: String(a.id),
       title: a.title || 'Alarm',
@@ -202,9 +259,14 @@ export class HardwareDevice implements IDeviceService {
   }
 
   public async createAlarm(alarm: Omit<Alarm, 'id' | 'createdAt' | 'updatedAt'>): Promise<Alarm> {
+    // Validate repeat schedule
+    if (alarm.repeatType === 'custom' && (!alarm.repeatDays || alarm.repeatDays.length === 0)) {
+      throw new Error('Custom repeat schedule requires at least one selected day of the week');
+    }
+
     const payload = {
-      title: alarm.title,
-      description: alarm.description,
+      title: alarm.title.trim() || 'Alarm',
+      description: alarm.description || '',
       hour: alarm.hour,
       minute: alarm.minute,
       second: alarm.second ?? 0,
@@ -219,30 +281,47 @@ export class HardwareDevice implements IDeviceService {
       date: alarm.date,
     };
 
-    const res = await this.request<any>('/api/alarms', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    try {
+      const res = await this.request<any>('/api/alarms', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
 
-    return {
-      id: String(res.id || res.data?.id || Date.now()),
-      title: alarm.title,
-      description: alarm.description,
-      hour: alarm.hour,
-      minute: alarm.minute,
-      second: alarm.second ?? 0,
-      enabled: alarm.enabled,
-      repeatType: alarm.repeatType,
-      repeatDays: alarm.repeatDays,
-      date: alarm.date,
-      soundId: alarm.soundId,
-      snoozeDuration: alarm.snoozeDuration,
-      wakeUpMission: alarm.wakeUpMission,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastTriggeredAt: null,
-      syncStatus: 'synced',
-    };
+      return {
+        id: String(res.id || res.data?.id || `alm-${Date.now()}`),
+        title: alarm.title,
+        description: alarm.description,
+        hour: alarm.hour,
+        minute: alarm.minute,
+        second: alarm.second ?? 0,
+        enabled: alarm.enabled,
+        repeatType: alarm.repeatType,
+        repeatDays: alarm.repeatDays,
+        date: alarm.date,
+        soundId: alarm.soundId,
+        snoozeDuration: alarm.snoozeDuration,
+        wakeUpMission: alarm.wakeUpMission,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastTriggeredAt: null,
+        syncStatus: 'synced',
+      };
+    } catch (err) {
+      // On timeout: Check device state BEFORE retrying to prevent duplicate alarm creation!
+      try {
+        const existingAlarms = await this.getAlarms();
+        const matched = existingAlarms.find(
+          (a) => a.hour === alarm.hour && a.minute === alarm.minute && a.title === alarm.title
+        );
+        if (matched) {
+          // Device already received and saved the alarm!
+          return matched;
+        }
+      } catch {
+        // Device check failed as well
+      }
+      throw err;
+    }
   }
 
   public async updateAlarm(id: string, alarm: Partial<Alarm>): Promise<Alarm> {
@@ -264,7 +343,7 @@ export class HardwareDevice implements IDeviceService {
     if (alarm.wakeUpMission !== undefined) payload.wakeUpMission = alarm.wakeUpMission;
     if (alarm.date !== undefined) payload.date = alarm.date;
 
-    const res = await this.request<any>(`/api/alarms/${id}`, {
+    await this.request<any>(`/api/alarms/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
@@ -285,7 +364,6 @@ export class HardwareDevice implements IDeviceService {
       updatedAt: new Date().toISOString(),
       lastTriggeredAt: null,
       syncStatus: 'synced',
-      ...(res.data || {}),
     };
   }
 
@@ -297,29 +375,18 @@ export class HardwareDevice implements IDeviceService {
   }
 
   public async toggleAlarm(id: string, enabled?: boolean): Promise<Alarm> {
-    const res = await this.request<any>(`/api/alarms/${id}/toggle`, {
+    await this.request<any>(`/api/alarms/${id}/toggle`, {
       method: 'POST',
       body: JSON.stringify({ enabled }),
     });
 
-    const data = res.data || res;
-    return {
-      id: String(data.id || id),
-      title: data.title || 'Alarm',
-      hour: data.hour ?? 0,
-      minute: data.minute ?? 0,
-      enabled: data.enabled ?? Boolean(enabled),
-      repeatType: data.repeat?.type || 'once',
-      repeatDays: data.repeat?.days || [],
-      date: data.date || null,
-      soundId: data.soundId || 'buzzer-standard',
-      snoozeDuration: data.snoozeDuration || 10,
-      wakeUpMission: data.wakeUpMission || false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastTriggeredAt: null,
-      syncStatus: 'synced',
-    };
+    // Fetch refreshed list to return updated record
+    const all = await this.getAlarms();
+    const updated = all.find((a) => a.id === id);
+    if (!updated) {
+      throw new Error(`Alarm ${id} not found on ESP32`);
+    }
+    return updated;
   }
 
   public async dismissAlarm(id: string): Promise<boolean> {
@@ -338,7 +405,7 @@ export class HardwareDevice implements IDeviceService {
   }
 
   public async getDiagnostics(): Promise<DiagnosticsData> {
-    const health = await this.request<any>('/api/device/health');
+    const health = await this.requestWithRetry<any>('/api/device/health', 1);
     const status = await this.getStatus();
 
     return {
@@ -347,7 +414,7 @@ export class HardwareDevice implements IDeviceService {
       ds3231TempCelsius: health.temperatureCelsius,
       ne555FrequencyHz: health.ne555Freq || 1.0,
       cd4518CounterSync: health.cd4518CounterSync !== false,
-      logicGatesStatus: health.logicGatesStatus || 'All BCD lines stable',
+      logicGatesStatus: health.logicGatesStatus || '3.3V to 5.0V 74HCT245 Bus Buffer Active',
       gpioConfig: health.gpioConfig || {
         buzzerPin: 25,
         i2cSdaPin: 21,
@@ -359,7 +426,7 @@ export class HardwareDevice implements IDeviceService {
         {
           timestamp: new Date().toLocaleTimeString(),
           level: 'INFO',
-          message: 'ESP32 health report retrieved successfully',
+          message: 'ESP32 health telemetry report retrieved successfully',
         },
       ],
     };

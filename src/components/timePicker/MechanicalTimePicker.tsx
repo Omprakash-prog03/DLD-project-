@@ -406,12 +406,15 @@ export const MechanicalTimePicker: React.FC<MechanicalTimePickerProps> = ({
             {/* Sound options */}
             {activeSheet === 'sound' && (
               <div className="space-y-1.5 py-3">
+                <p className="text-[11px] text-[#85847F] dark:text-[#999890] px-1 pb-1">
+                  Hardware piezo buzzer driven by PWM transistor (GPIO 25). Selectable frequency patterns (polyphonic musical melodies are not supported on this buzzer).
+                </p>
                 {[
-                  { id: 'buzzer-standard', name: 'Standard Piezo (2.4 kHz)' },
-                  { id: 'buzzer-pulsed', name: 'Pulsed Burst (High Attention)' },
+                  { id: 'buzzer-standard', name: 'Standard Resonant (2.4 kHz Piezo)' },
+                  { id: 'buzzer-pulsed', name: 'Pulsed Burst (High Alert Pattern)' },
                   { id: 'buzzer-multitone', name: 'Dual Frequency (1.8 kHz / 2.6 kHz)' },
                   { id: 'buzzer-fast', name: 'Fast Rapid Pulse' },
-                  { id: 'buzzer-gentle', name: 'Soft Triangle Tone' },
+                  { id: 'buzzer-gentle', name: 'Soft Triangle Tone (1.2 kHz)' },
                 ].map((s) => (
                   <div
                     key={s.id}
