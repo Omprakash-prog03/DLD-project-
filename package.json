@@ -1,0 +1,41 @@
+{
+  "name": "dld-smart-alarm-web",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Digital Clock & Smart Alarm — ESP32 Web Control System",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Omprakash-prog03/DLD-project-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Omprakash-prog03/DLD-project-/issues"
+  },
+  "homepage": "https://github.com/Omprakash-prog03/DLD-project-#readme",
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.72.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "autoprefixer": "^10.6.2",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
