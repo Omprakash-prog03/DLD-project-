@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #E8E7E1;
+    --surface-secondary: #F2F1EC;
+    --text-primary: #171717;
+    --text-secondary: #85847F;
+    --border-color: #C9C8C1;
+    --accent-yellow: #E9D82C;
+  }
+
+  .dark {
+    --bg-primary: #171715;
+    --surface-secondary: #22221F;
+    --text-primary: #F2F0E9;
+    --text-secondary: #999890;
+    --border-color: #2F2F2B;
+    --accent-yellow: #E9D82C;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom hide scrollbars while allowing scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Tabular figures for clocks and timers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
