@@ -298,6 +298,13 @@ export class SimulatedDevice implements IDeviceService {
       ne555FrequencyHz: 1.002, // 1Hz clock pulse
       cd4518CounterSync: true,
       logicGatesStatus: '74HC08, 74HC32, 74HC04 OK — 3.3V/5V Level Shifter Active',
+      lastApiResponse: {
+        endpoint: 'GET /api/status',
+        statusCode: 200,
+        latencyMs: 42,
+        timestamp: new Date().toLocaleTimeString(),
+        summary: '{"connected": true, "device": "ESP32-WROOM-32 (Simulated)"}',
+      },
       gpioConfig: {
         buzzerPin: 25,
         i2cSdaPin: 21,

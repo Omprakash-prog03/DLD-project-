@@ -1,4 +1,4 @@
-import { Alarm, ClockTime, DeviceStatus, DiagnosticsData, IDeviceService, SoundType } from '../../types';
+import { Alarm, ClockTime, DeviceStatus, DiagnosticsData, IDeviceService, LastApiResponse, SoundType } from '../../types';
 import { DEFAULT_NETWORK_CONFIG } from '../../config/deviceConfig';
 
 export class HardwareDevice implements IDeviceService {
@@ -7,6 +7,7 @@ export class HardwareDevice implements IDeviceService {
   private timeoutMs: number;
   private lastKnownStatus: DeviceStatus | null = null;
   private isCurrentlyConnected: boolean = false;
+  private lastApiResponseInfo: LastApiResponse | null = null;
 
   constructor(ipAddress: string = DEFAULT_NETWORK_CONFIG.defaultApIp, port: number = DEFAULT_NETWORK_CONFIG.defaultPort) {
     this.ipAddress = ipAddress.trim();
@@ -49,6 +50,7 @@ export class HardwareDevice implements IDeviceService {
     const url = `${baseUrl}${endpoint}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const startTime = performance.now();
 
     try {
       const response = await fetch(url, {
@@ -62,6 +64,7 @@ export class HardwareDevice implements IDeviceService {
       });
 
       clearTimeout(timer);
+      const latencyMs = Math.round(performance.now() - startTime);
 
       if (!response.ok) {
         let errorMsg = `ESP32 returned HTTP ${response.status}: ${response.statusText}`;
@@ -71,15 +74,37 @@ export class HardwareDevice implements IDeviceService {
         } catch {
           // non-JSON error
         }
+        this.lastApiResponseInfo = {
+          endpoint: `${options.method || 'GET'} ${endpoint}`,
+          statusCode: response.status,
+          latencyMs,
+          timestamp: new Date().toLocaleTimeString(),
+          summary: errorMsg,
+        };
         throw new Error(errorMsg);
       }
 
       const json = await response.json();
       this.isCurrentlyConnected = true;
+      this.lastApiResponseInfo = {
+        endpoint: `${options.method || 'GET'} ${endpoint}`,
+        statusCode: response.status,
+        latencyMs,
+        timestamp: new Date().toLocaleTimeString(),
+        summary: JSON.stringify(json).slice(0, 120),
+      };
       return json;
     } catch (err: unknown) {
       clearTimeout(timer);
       this.isCurrentlyConnected = false;
+      const latencyMs = Math.round(performance.now() - startTime);
+      this.lastApiResponseInfo = {
+        endpoint: `${options.method || 'GET'} ${endpoint}`,
+        statusCode: 0,
+        latencyMs,
+        timestamp: new Date().toLocaleTimeString(),
+        summary: err instanceof Error ? err.message : 'Network failure',
+      };
 
       const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
 
@@ -415,6 +440,7 @@ export class HardwareDevice implements IDeviceService {
       ne555FrequencyHz: health.ne555Freq || 1.0,
       cd4518CounterSync: health.cd4518CounterSync !== false,
       logicGatesStatus: health.logicGatesStatus || '3.3V to 5.0V 74HCT245 Bus Buffer Active',
+      lastApiResponse: this.lastApiResponseInfo || undefined,
       gpioConfig: health.gpioConfig || {
         buzzerPin: 25,
         i2cSdaPin: 21,

@@ -103,10 +103,10 @@ export const EditorialLayout: React.FC = () => {
       </header>
 
       {/* Main Editorial Presentation Canvas (Inspired by image-1.png) */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10 flex items-center justify-center">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-8 py-3 sm:py-10 flex items-center justify-center overflow-x-hidden">
         {desktopViewMode === 'editorial-frame' ? (
           /* 3-Column Editorial Grid matching video storyboard */
-          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center justify-items-center">
             {/* Left Column Typography & Editorial Tagline (Frames 0s to 16s in reference) */}
             <div className="hidden lg:flex lg:col-span-3 flex-col justify-between h-[750px] py-4 select-none">
               <div>

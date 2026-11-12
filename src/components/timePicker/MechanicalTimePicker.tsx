@@ -193,10 +193,31 @@ export const MechanicalTimePicker: React.FC<MechanicalTimePickerProps> = ({
           {/* HOUR WHEEL */}
           <div
             ref={hourContainerRef}
+            tabIndex={0}
+            role="spinbutton"
+            aria-label="Hour selector"
+            aria-valuenow={selectedHour}
+            aria-valuemin={0}
+            aria-valuemax={23}
             onWheel={handleHourWheel}
             onTouchStart={handleTouchStart}
             onTouchMove={handleHourTouchMove}
-            className="flex-1 h-full flex flex-col items-center justify-center cursor-ns-resize"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowUp' || e.key === 'k') {
+                e.preventDefault();
+                changeHour(-1);
+              } else if (e.key === 'ArrowDown' || e.key === 'j') {
+                e.preventDefault();
+                changeHour(1);
+              } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                changeHour(-5);
+              } else if (e.key === 'PageDown') {
+                e.preventDefault();
+                changeHour(5);
+              }
+            }}
+            className="flex-1 h-full flex flex-col items-center justify-center cursor-ns-resize focus:outline-none focus:ring-1 focus:ring-[#E9D82C]/60 rounded-2xl transition-all"
           >
             {hourOffsets.map((offset) => {
               const h = (selectedHour + offset + 24) % 24;
@@ -240,10 +261,31 @@ export const MechanicalTimePicker: React.FC<MechanicalTimePickerProps> = ({
           {/* MINUTE WHEEL */}
           <div
             ref={minuteContainerRef}
+            tabIndex={0}
+            role="spinbutton"
+            aria-label="Minute selector"
+            aria-valuenow={selectedMinute}
+            aria-valuemin={0}
+            aria-valuemax={59}
             onWheel={handleMinuteWheel}
             onTouchStart={handleTouchStart}
             onTouchMove={handleMinuteTouchMove}
-            className="flex-1 h-full flex flex-col items-center justify-center cursor-ns-resize"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowUp' || e.key === 'k') {
+                e.preventDefault();
+                changeMinute(-1);
+              } else if (e.key === 'ArrowDown' || e.key === 'j') {
+                e.preventDefault();
+                changeMinute(1);
+              } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                changeMinute(-10);
+              } else if (e.key === 'PageDown') {
+                e.preventDefault();
+                changeMinute(10);
+              }
+            }}
+            className="flex-1 h-full flex flex-col items-center justify-center cursor-ns-resize focus:outline-none focus:ring-1 focus:ring-[#E9D82C]/60 rounded-2xl transition-all"
           >
             {minuteOffsets.map((offset) => {
               const m = (selectedMinute + offset + 60) % 60;

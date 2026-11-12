@@ -21,7 +21,7 @@ export const PhoneFrame: React.FC = () => {
   } = useAppStore();
 
   return (
-    <div className="relative w-full max-w-[390px] h-[812px] bg-[#E8E7E1] dark:bg-[#171715] rounded-[48px] p-2.5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] border-[8px] border-[#1C1C1E] dark:border-[#2C2C2E] flex flex-col justify-between overflow-hidden">
+    <div className="relative w-full max-w-[390px] h-[812px] max-h-[92vh] bg-[#E8E7E1] dark:bg-[#171715] rounded-[36px] sm:rounded-[48px] p-2 sm:p-2.5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] border-4 sm:border-[8px] border-[#1C1C1E] dark:border-[#2C2C2E] flex flex-col justify-between overflow-hidden">
       {/* Dynamic island & Status bar */}
       <StatusBar />
 

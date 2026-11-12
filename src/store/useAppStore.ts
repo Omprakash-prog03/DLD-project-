@@ -52,6 +52,8 @@ interface AppState {
   refreshDeviceStatus: () => Promise<void>;
   testConnection: () => Promise<{ success: boolean; latencyMs: number; message: string }>;
   testBuzzer: (soundId?: SoundType) => Promise<void>;
+  disconnectDevice: () => void;
+  reconnectDevice: () => Promise<void>;
 
   // Alarm Actions
   loadAlarms: () => Promise<void>;
@@ -332,6 +334,38 @@ export const useAppStore = create<AppState>((set, get) => ({
       await deviceService.triggerBuzzerTest(soundId, 600);
     } catch {
       // Ignore if offline
+    }
+  },
+
+  disconnectDevice: () => {
+    const current = get().deviceStatus;
+    set({
+      deviceStatus: {
+        ...current,
+        connected: false,
+        connectionState: 'disconnected',
+        errorMessage: 'Disconnected by user',
+      },
+      lastActionMessage: 'Hardware link disconnected',
+    });
+  },
+
+  reconnectDevice: async () => {
+    set({ isConnecting: true, lastActionError: null });
+    try {
+      const res = await deviceService.testConnection();
+      await get().refreshDeviceStatus();
+      await get().refreshDeviceTime();
+      await get().loadAlarms();
+      set({
+        isConnecting: false,
+        lastActionMessage: res.message || 'Device reconnected successfully',
+      });
+    } catch (err: any) {
+      set({
+        isConnecting: false,
+        lastActionError: `Reconnection failed: ${err.message}`,
+      });
     }
   },
 

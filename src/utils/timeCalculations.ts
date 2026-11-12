@@ -10,8 +10,69 @@ export const DAYS_OF_WEEK = [
   { id: 0, short: 'Sun', full: 'Sunday' },
 ];
 
+export const DEFAULT_TIMEZONE = 'Asia/Kolkata';
+
 export function padZero(num: number): string {
   return num.toString().padStart(2, '0');
+}
+
+/**
+ * Returns date and time broken down in the configured timezone (defaults to Asia/Kolkata UTC+5:30)
+ */
+export function getZonedDate(date: Date = new Date(), timezone: string = DEFAULT_TIMEZONE): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  dayOfWeek: number;
+} {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+
+    const parts = formatter.formatToParts(date);
+    const map: Record<string, number> = {};
+    for (const p of parts) {
+      if (p.type !== 'literal') {
+        map[p.type] = parseInt(p.value, 10);
+      }
+    }
+
+    const dStr = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' }).format(date);
+    const dayIndexMap: Record<string, number> = {
+      Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    };
+
+    return {
+      year: map.year || date.getFullYear(),
+      month: map.month || (date.getMonth() + 1),
+      day: map.day || date.getDate(),
+      hour: (map.hour === 24 ? 0 : map.hour) ?? date.getHours(),
+      minute: map.minute ?? date.getMinutes(),
+      second: map.second ?? date.getSeconds(),
+      dayOfWeek: dayIndexMap[dStr] ?? date.getDay(),
+    };
+  } catch {
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+      second: date.getSeconds(),
+      dayOfWeek: date.getDay(),
+    };
+  }
 }
 
 export function formatTimeDisplay(
@@ -48,7 +109,6 @@ export function getRepeatLabel(repeatType: RepeatType, repeatDays: number[]): st
     case 'custom': {
       if (repeatDays.length === 7) return 'Every day';
       if (repeatDays.length === 0) return 'Never';
-      // Match weekdays
       const isWeekdays =
         repeatDays.length === 5 && [1, 2, 3, 4, 5].every((d) => repeatDays.includes(d));
       if (isWeekdays) return 'Mon – Fri';
@@ -66,7 +126,7 @@ export function getRepeatLabel(repeatType: RepeatType, repeatDays: number[]): st
 }
 
 /**
- * Calculates the next occurrence of an alarm relative to a given reference time.
+ * Calculates the next occurrence of an alarm relative to the device's configured timezone.
  */
 export function getNextAlarmOccurrence(
   alarm: Alarm,
@@ -98,7 +158,6 @@ export function getNextAlarmOccurrence(
       }
       return null;
     } else {
-      // One-time alarm for today or tomorrow
       const todayTarget = new Date(
         currentTime.year,
         currentTime.month - 1,
@@ -118,7 +177,6 @@ export function getNextAlarmOccurrence(
       if (todayTarget.getTime() > current.getTime()) {
         return todayTarget;
       }
-      // Tomorrow
       const tomorrow = new Date(todayTarget);
       tomorrow.setDate(tomorrow.getDate() + 1);
       return tomorrow;
@@ -144,7 +202,6 @@ export function getNextAlarmOccurrence(
   const alarmTotalSeconds =
     alarm.hour * 3600 + alarm.minute * 60 + (alarm.second || 0);
 
-  // Check today if alarm is scheduled for today and is in the future
   if (activeDays.has(currentDayOfWeek) && alarmTotalSeconds > currentTotalSeconds) {
     return new Date(
       currentTime.year,
@@ -156,7 +213,6 @@ export function getNextAlarmOccurrence(
     );
   }
 
-  // Look ahead in the upcoming 7 days
   for (let offset = 1; offset <= 7; offset++) {
     const candidateDayOfWeek = (currentDayOfWeek + offset) % 7;
     if (activeDays.has(candidateDayOfWeek)) {

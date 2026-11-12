@@ -63,6 +63,14 @@ export interface DeviceStatus {
   errorMessage?: string;
 }
 
+export interface LastApiResponse {
+  endpoint: string;
+  statusCode: number;
+  latencyMs: number;
+  timestamp: string;
+  summary: string;
+}
+
 export interface DiagnosticsData {
   deviceStatus: DeviceStatus;
   i2cAddressesFound: string[];
@@ -70,6 +78,7 @@ export interface DiagnosticsData {
   ne555FrequencyHz?: number;
   cd4518CounterSync: boolean;
   logicGatesStatus: string;
+  lastApiResponse?: LastApiResponse;
   gpioConfig: {
     buzzerPin: number;
     i2cSdaPin: number;
