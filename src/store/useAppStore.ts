@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Alarm, ClockTime, DeviceStatus, OperatingMode, SoundType, TimeFormat } from '../types';
 import { deviceService } from '../services/device/deviceService';
 import { buzzerAudio } from '../services/audio/buzzerAudio';
+import { getZonedDate } from '../utils/timeCalculations';
 
 export type NavigationTab = 'dashboard' | 'alarms' | 'clock-settings' | 'device' | 'diagnostics' | 'game';
 
@@ -69,14 +70,14 @@ interface AppState {
 }
 
 const initialTime = (): ClockTime => {
-  const now = new Date();
+  const zoned = getZonedDate(new Date(), 'Asia/Kolkata');
   return {
-    hour: now.getHours(),
-    minute: now.getMinutes(),
-    second: now.getSeconds(),
-    day: now.getDate(),
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
+    hour: zoned.hour,
+    minute: zoned.minute,
+    second: zoned.second,
+    day: zoned.day,
+    month: zoned.month,
+    year: zoned.year,
     source: 'SIMULATED',
     timezone: 'Asia/Kolkata',
   };
@@ -284,14 +285,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   syncWithBrowserTime: async () => {
-    const now = new Date();
+    const zoned = getZonedDate(new Date(), 'Asia/Kolkata');
     return get().setDeviceTime({
-      hour: now.getHours(),
-      minute: now.getMinutes(),
-      second: now.getSeconds(),
-      day: now.getDate(),
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
+      hour: zoned.hour,
+      minute: zoned.minute,
+      second: zoned.second,
+      day: zoned.day,
+      month: zoned.month,
+      year: zoned.year,
     });
   },
 
@@ -379,8 +380,34 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveAlarm: async (alarmData) => {
-    const { editingAlarm } = get();
+    const { editingAlarm, alarms } = get();
     set({ isSyncing: true, lastActionError: null });
+
+    // Validate repeat schedule
+    if (alarmData.repeatType === 'custom' && (!alarmData.repeatDays || alarmData.repeatDays.length === 0)) {
+      set({
+        isSyncing: false,
+        lastActionError: 'Custom repeat schedule requires at least one selected day of the week.',
+      });
+      return null;
+    }
+
+    // Check duplicate alarm (same title and time)
+    const isDuplicate = alarms.some(
+      (a) =>
+        (!editingAlarm || a.id !== editingAlarm.id) &&
+        a.hour === alarmData.hour &&
+        a.minute === alarmData.minute &&
+        a.title.trim().toLowerCase() === alarmData.title.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      set({
+        isSyncing: false,
+        lastActionError: `Duplicate alarm: "${alarmData.title}" at ${alarmData.hour}:${String(alarmData.minute).padStart(2, '0')} already exists.`,
+      });
+      return null;
+    }
 
     try {
       let saved: Alarm;
@@ -390,11 +417,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         saved = await deviceService.createAlarm(alarmData);
       }
 
-      const alarms = await deviceService.getAlarms();
+      const updatedAlarms = await deviceService.getAlarms();
       buzzerAudio.playConfirm();
 
       set({
-        alarms,
+        alarms: updatedAlarms,
         isAlarmCreatorOpen: false,
         editingAlarm: null,
         isSyncing: false,

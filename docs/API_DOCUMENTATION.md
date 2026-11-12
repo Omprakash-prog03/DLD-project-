@@ -239,8 +239,8 @@ Toggles an alarm's enabled state between `true` and `false`.
 }
 ```
 
-#### `POST /api/alarms/{id}/dismiss`
-Silences an active ringing hardware buzzer.
+#### `POST /api/alarms/{id}/dismiss` (or `POST /api/alarms/dismiss`)
+Silences an active ringing hardware buzzer. Supported with or without an ID parameter.
 
 **Response (200 OK):**
 ```json
@@ -252,7 +252,30 @@ Silences an active ringing hardware buzzer.
 
 ---
 
-### 3.4 Hardware Diagnostics & Health
+### 3.4 Wi-Fi Network Configuration
+
+#### `POST /api/network/wifi`
+Configures development SoftAP credentials (SSID & password) or Station credentials in ESP32 NVS non-volatile flash.
+
+**Request Payload:**
+```json
+{
+  "apSsid": "DigitalClock-ESP32",
+  "apPassword": "newSecretPassword123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Wi-Fi parameters saved to NVS. Reboot to apply."
+}
+```
+
+---
+
+### 3.5 Hardware Diagnostics & Health
 
 #### `GET /api/device/health`
 Returns hardware diagnostics including I2C bus scan, internal die temperature, logic gate status, and GPIO pin configuration.

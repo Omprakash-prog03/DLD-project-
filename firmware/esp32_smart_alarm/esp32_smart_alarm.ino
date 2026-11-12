@@ -501,6 +501,52 @@ void handleBuzzerTest() {
   server.send(200, "application/json", "{\"success\":true,\"message\":\"Buzzer test triggered (800ms PWM)\"}");
 }
 
+// POST /api/alarms/dismiss
+void handleDirectDismiss() {
+  setCORS();
+  stopBuzzer();
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Alarm dismissed\"}");
+}
+
+// POST /api/network/wifi (Configurable AP / Station Networking)
+void handlePostWifi() {
+  setCORS();
+  if (!server.hasArg("plain")) {
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"Missing body\"}");
+    return;
+  }
+
+  StaticJsonDocument<256> doc;
+  DeserializationError err = deserializeJson(doc, server.arg("plain"));
+  if (err) {
+    server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON\"}");
+    return;
+  }
+
+  preferences.begin("smartclock", false);
+  if (doc.containsKey("apSsid")) {
+    const char* s = doc["apSsid"];
+    if (strlen(s) >= 1) {
+      strncpy(apSsid, s, 31);
+      preferences.putString("ap_ssid", apSsid);
+    }
+  }
+  if (doc.containsKey("apPassword")) {
+    const char* p = doc["apPassword"];
+    if (strlen(p) >= 8) {
+      strncpy(apPassword, p, 31);
+      preferences.putString("ap_pass", apPassword);
+    } else {
+      preferences.end();
+      server.send(400, "application/json", "{\"success\":false,\"message\":\"AP Password must be at least 8 characters\"}");
+      return;
+    }
+  }
+  preferences.end();
+
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Wi-Fi parameters saved to NVS. Reboot to apply.\"}");
+}
+
 // ----------------- Dynamic Route Dispatcher --------
 // Handles:
 //   PUT    /api/alarms/{id}
@@ -695,14 +741,21 @@ void setup() {
   // Load persistent alarms from NVS flash
   loadAlarmsFromNVS();
 
-  // Configure Wi-Fi SoftAP
+  // Configure Wi-Fi SoftAP with NVS-backed credentials
+  preferences.begin("smartclock", true);
+  String savedSsid = preferences.getString("ap_ssid", DEFAULT_AP_SSID);
+  String savedPass = preferences.getString("ap_pass", DEFAULT_AP_PASS);
+  strncpy(apSsid, savedSsid.c_str(), 31);
+  strncpy(apPassword, savedPass.c_str(), 31);
+  preferences.end();
+
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(DEFAULT_AP_IP, DEFAULT_AP_GATEWAY, DEFAULT_AP_SUBNET);
-  WiFi.softAP(DEFAULT_AP_SSID, DEFAULT_AP_PASS);
+  WiFi.softAP(apSsid, apPassword);
 
   Serial.println("\n==========================================");
   Serial.println("  ESP32 Digital Clock & Smart Alarm System");
-  Serial.printf("  AP SSID: %s\n", DEFAULT_AP_SSID);
+  Serial.printf("  AP SSID: %s\n", apSsid);
   Serial.printf("  AP IP:   %s\n", WiFi.softAPIP().toString().c_str());
   Serial.printf("  Port:    %d\n", HTTP_REST_PORT);
   Serial.println("==========================================\n");
@@ -718,6 +771,12 @@ void setup() {
   server.on("/api/alarms", HTTP_GET, handleGetAlarms);
   server.on("/api/alarms", HTTP_POST, handlePostAlarms);
   server.on("/api/alarms", HTTP_OPTIONS, handleOptions);
+
+  server.on("/api/alarms/dismiss", HTTP_POST, handleDirectDismiss);
+  server.on("/api/alarms/dismiss", HTTP_OPTIONS, handleOptions);
+
+  server.on("/api/network/wifi", HTTP_POST, handlePostWifi);
+  server.on("/api/network/wifi", HTTP_OPTIONS, handleOptions);
 
   server.on("/api/device/health", HTTP_GET, handleGetHealth);
   server.on("/api/device/buzzer-test", HTTP_POST, handleBuzzerTest);
