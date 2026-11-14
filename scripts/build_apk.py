@@ -52,6 +52,9 @@ def make_minimal_arsc():
 def build_apk(output_path, is_release=False):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     manifest_xml = open('android/app/src/main/AndroidManifest.xml', 'rb').read()
+    styles_xml = open('android/app/src/main/res/values/styles.xml', 'rb').read() if os.path.exists('android/app/src/main/res/values/styles.xml') else b''
+    colors_xml = open('android/app/src/main/res/values/colors.xml', 'rb').read() if os.path.exists('android/app/src/main/res/values/colors.xml') else b''
+    launch_bg = open('android/app/src/main/res/drawable/launch_background.xml', 'rb').read() if os.path.exists('android/app/src/main/res/drawable/launch_background.xml') else b''
     dex_bytes = make_minimal_dex()
     arsc_bytes = make_minimal_arsc()
     icon_192 = open('public/icons/icon-192.png', 'rb').read()
@@ -61,6 +64,9 @@ def build_apk(output_path, is_release=False):
         'AndroidManifest.xml': manifest_xml,
         'classes.dex': dex_bytes,
         'resources.arsc': arsc_bytes,
+        'res/values/styles.xml': styles_xml,
+        'res/values/colors.xml': colors_xml,
+        'res/drawable/launch_background.xml': launch_bg,
         'res/mipmap-hdpi/ic_launcher.png': icon_192,
         'res/mipmap-mdpi/ic_launcher.png': icon_192,
         'res/mipmap-xhdpi/ic_launcher.png': icon_192,
@@ -140,6 +146,9 @@ def build_apk(output_path, is_release=False):
 def build_aab(output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     manifest_xml = open('android/app/src/main/AndroidManifest.xml', 'rb').read()
+    styles_xml = open('android/app/src/main/res/values/styles.xml', 'rb').read() if os.path.exists('android/app/src/main/res/values/styles.xml') else b''
+    colors_xml = open('android/app/src/main/res/values/colors.xml', 'rb').read() if os.path.exists('android/app/src/main/res/values/colors.xml') else b''
+    launch_bg = open('android/app/src/main/res/drawable/launch_background.xml', 'rb').read() if os.path.exists('android/app/src/main/res/drawable/launch_background.xml') else b''
     dex_bytes = make_minimal_dex()
     icon_192 = open('public/icons/icon-192.png', 'rb').read()
     icon_512 = open('public/icons/icon-512.png', 'rb').read()
@@ -149,6 +158,9 @@ def build_aab(output_path):
         'BundleConfig.pb': b'\x08\x01\x12\x0bSmartClock',
         'base/manifest/AndroidManifest.xml': manifest_xml,
         'base/dex/classes.dex': dex_bytes,
+        'base/res/values/styles.xml': styles_xml,
+        'base/res/values/colors.xml': colors_xml,
+        'base/res/drawable/launch_background.xml': launch_bg,
         'base/res/mipmap-hdpi/ic_launcher.png': icon_192,
         'base/res/mipmap-xxhdpi/ic_launcher.png': icon_512,
         'base/assets/flutter_assets/NOTICES.Z': b'Smart Clock Mobile Companion License Notices\n',
