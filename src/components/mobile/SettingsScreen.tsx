@@ -11,10 +11,19 @@ import {
   RefreshCw,
   Sliders,
   CheckCircle2,
+  Download,
+  Smartphone,
+  QrCode,
+  ArrowDownToLine,
+  ShieldCheck,
 } from 'lucide-react';
 import { SoundType } from '../../types';
 
-export const SettingsScreen: React.FC = () => {
+interface SettingsScreenProps {
+  onOpenDownload?: () => void;
+}
+
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenDownload }) => {
   const {
     timeFormat,
     setTimeFormat,
@@ -44,6 +53,73 @@ export const SettingsScreen: React.FC = () => {
         <p className="text-xs text-neutral-400 mt-0.5">
           Confirmed Hardware & Companion Preferences
         </p>
+      </div>
+
+      {/* 0. Mobile App Downloads & Phone Installation */}
+      <div>
+        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">MOBILE APP DOWNLOADS</p>
+        <div className="bg-[#1E1E1E] rounded-[24px] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#E84B2F] flex items-center justify-center text-white shrink-0">
+                <Smartphone size={20} />
+              </div>
+              <div>
+                <h4 className="text-[15px] font-bold text-white leading-tight flex items-center gap-1.5">
+                  <span>Android Package (.apk)</span>
+                  <ShieldCheck size={14} className="text-[#2ECC71]" />
+                </h4>
+                <p className="text-[11px] text-neutral-400">Signed release v1.0.0 installer</p>
+              </div>
+            </div>
+            <a
+              href="/downloads/smart-clock-release.apk"
+              download="smart-clock-release.apk"
+              className="px-3.5 py-2 bg-[#E84B2F] hover:bg-[#d03d22] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition"
+            >
+              <Download size={13} />
+              <span>Get APK</span>
+            </a>
+          </div>
+
+          <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#2A2A2A] flex items-center justify-center text-neutral-300 shrink-0">
+                <Download size={18} />
+              </div>
+              <div>
+                <h4 className="text-[14px] font-bold text-white leading-tight">Android App Bundle (.aab)</h4>
+                <p className="text-[11px] text-neutral-400">Google Play Store distribution bundle</p>
+              </div>
+            </div>
+            <a
+              href="/downloads/smart-clock.aab"
+              download="smart-clock.aab"
+              className="px-3.5 py-2 bg-[#2A2A2A] hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition"
+            >
+              <span>Get AAB</span>
+            </a>
+          </div>
+
+          <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#3B5BDB] flex items-center justify-center text-white shrink-0">
+                <QrCode size={18} />
+              </div>
+              <div>
+                <h4 className="text-[14px] font-bold text-white leading-tight">Scan Camera QR Code</h4>
+                <p className="text-[11px] text-neutral-400">Open & install directly on smartphone</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenDownload}
+              className="px-3.5 py-2 bg-[#3B5BDB] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition"
+            >
+              <span>Show QR</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 1. Device Identification (Confirmed Supported) */}
@@ -118,111 +194,90 @@ export const SettingsScreen: React.FC = () => {
             </div>
             <span className="text-xs text-neutral-500 font-mono">100%</span>
           </div>
-          <input
-            type="range"
-            disabled
-            value={100}
-            min={10}
-            max={100}
-            className="w-full accent-neutral-600"
-          />
+
+          <p className="text-[11px] text-neutral-400 leading-relaxed">
+            Hardware uses CD4511 decoders powered by static 5.0V; no PWM blanking pin connected in current PCB revision. Control is disabled.
+          </p>
         </div>
-        <p className="text-[11px] text-neutral-400 mt-1.5 px-1 leading-relaxed">
-          <span className="text-[#E84B2F] font-semibold">Technical note:</span> Display hardware uses CD4511 BCD-to-7-segment decoders wired directly to the 5.0V power rail. PWM brightness modulation on the blanking pin is not present on current PCB revision 1.
-        </p>
       </div>
 
-      {/* 4. Buzzer & Alarm Audio Configuration (Confirmed Supported) */}
+      {/* 4. Buzzer & Sound Patterns (Confirmed Supported via GPIO 25 PWM) */}
       <div>
-        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">BUZZER & SOUND PATTERNS</p>
+        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">ALARM SOUND PATTERNS</p>
         <div className="bg-[#1E1E1E] rounded-[24px] p-4 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-[#2A2A2A]">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#E84B2F] flex items-center justify-center text-white">
-                <Volume2 size={18} />
+          <div className="space-y-2">
+            {soundOptions.map((opt) => (
+              <div
+                key={opt.id}
+                onClick={() => setSelectedSound(opt.id)}
+                className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                  selectedSound === opt.id
+                    ? 'border-[#E84B2F] bg-[#E84B2F]/10'
+                    : 'border-[#2A2A2A] hover:border-neutral-700'
+                }`}
+              >
+                <div>
+                  <h5 className="text-sm font-bold text-white">{opt.label}</h5>
+                  <p className="text-xs text-neutral-400">{opt.desc}</p>
+                </div>
+                {selectedSound === opt.id && (
+                  <CheckCircle2 size={18} className="text-[#E84B2F]" />
+                )}
               </div>
-              <div>
-                <h4 className="text-[15px] font-bold text-white leading-tight">Audible Piezo Alarm</h4>
-                <p className="text-[11px] text-neutral-400">GPIO 25 (2.4kHz Resonant PWM)</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => testBuzzer(selectedSound)}
-              className="px-3 py-1 bg-[#2A2A2A] hover:bg-neutral-700 text-white rounded-lg text-xs font-bold transition"
-            >
-              Test Tone
-            </button>
-          </div>
-
-          <div>
-            <label className="text-[12px] font-semibold text-neutral-400 block mb-2">
-              Alarm Sound Pattern
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {soundOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setSelectedSound(opt.id)}
-                  className={`p-2.5 rounded-xl text-left border transition ${
-                    selectedSound === opt.id
-                      ? 'bg-[#E84B2F]/15 border-[#E84B2F] text-white'
-                      : 'bg-[#111111] border-[#2A2A2A] text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  <p className="text-xs font-bold">{opt.label}</p>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">{opt.desc}</p>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
 
           <div className="pt-2 border-t border-[#2A2A2A] flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-white">Auto-Silence Safety Cutoff</p>
-              <p className="text-[10px] text-neutral-400">Firmware safety timer prevents continuous ringing</p>
+              <p className="text-xs font-semibold text-neutral-300">Test Hardware Buzzer</p>
+              <p className="text-[11px] text-neutral-400">Sends pulse command to GPIO 25</p>
             </div>
-            <span className="text-xs font-bold text-[#E84B2F] bg-[#E84B2F]/20 px-2.5 py-1 rounded-md">
-              120 seconds
-            </span>
+            <button
+              type="button"
+              onClick={() => testBuzzer()}
+              className="px-3 py-1.5 bg-[#E84B2F] hover:bg-[#d03d22] text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <Volume2 size={13} />
+              <span>Test Audio</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* 5. Synchronization Preferences (Confirmed Supported) */}
+      {/* 5. Synchronization Preferences */}
       <div>
-        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">SYNCHRONIZATION POLICY</p>
+        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">SYNCHRONIZATION</p>
         <div className="bg-[#1E1E1E] rounded-[24px] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#2A2A2A] flex items-center justify-center text-white">
-                <RefreshCw size={18} />
-              </div>
-              <div>
-                <h4 className="text-[15px] font-bold text-white leading-tight">Auto-Sync on Connect</h4>
-                <p className="text-[11px] text-neutral-400">Update DS3231 RTC upon handshake</p>
-              </div>
+            <div>
+              <h5 className="text-[14px] font-bold text-white">Auto-Sync on Connect</h5>
+              <p className="text-[11px] text-neutral-400">Synchronize DS3231 RTC when link opens</p>
             </div>
             <input
               type="checkbox"
               checked={autoSyncOnConnect}
               onChange={(e) => setAutoSyncOnConnect(e.target.checked)}
-              className="w-5 h-5 accent-[#E84B2F] cursor-pointer"
+              className="accent-[#E84B2F] w-4 h-4 cursor-pointer"
             />
           </div>
 
-          <div className="pt-2 border-t border-[#2A2A2A] flex justify-between items-center text-xs">
-            <span className="text-neutral-400">Target Timezone Policy</span>
-            <span className="text-white font-mono font-bold">Asia/Kolkata (UTC+5:30)</span>
+          <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+            <div>
+              <h5 className="text-[14px] font-bold text-white">Auto-Cutoff Limit</h5>
+              <p className="text-[11px] text-neutral-400">Firmware buzzer safety cutoff</p>
+            </div>
+            <span className="text-xs text-neutral-300 font-mono">120 sec</span>
           </div>
         </div>
       </div>
 
-      {/* 6. Hardware Transport Mode */}
+      {/* 6. Hardware Transport Mode Toggle */}
       <div>
-        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">COMMUNICATION ADAPTER</p>
+        <p className="text-[12px] font-bold text-neutral-400 tracking-wider mb-2">OPERATING MODE</p>
         <div className="bg-[#1E1E1E] rounded-[24px] p-4 space-y-3">
+          <p className="text-xs text-neutral-400">
+            Switch between simulated hardware for offline testing and real ESP32 Bluetooth / Wi-Fi links.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -233,7 +288,7 @@ export const SettingsScreen: React.FC = () => {
                   : 'bg-[#2A2A2A] text-neutral-400'
               }`}
             >
-              Simulated (Mock)
+              Mock Simulator
             </button>
             <button
               type="button"
