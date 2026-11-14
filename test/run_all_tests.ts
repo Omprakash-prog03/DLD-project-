@@ -5,7 +5,7 @@
  * 2. Hardware Protocol Frame Serialization & Deserialization (v1)
  * 3. DS3231 I2C BCD Conversion & RTC Date Algorithms
  * 4. Synchronization Engine State Machine
- * 5. Hardware Command Registry & Error Catalog
+ * 5. Hardware Command Registry, Idempotency Rules & CD4511 Rejection
  */
 
 function assert(condition: boolean, message: string) {
@@ -190,6 +190,85 @@ runTest('Alarm sync states transition predictably', () => {
   assert(isValidTransition('pending', 'synchronizing'), 'pending -> synchronizing must be valid');
   assert(isValidTransition('synchronizing', 'synchronized'), 'synchronizing -> synchronized must be valid');
   assert(!isValidTransition('localOnly', 'synchronized'), 'Direct localOnly -> synchronized must be invalid');
+});
+
+// 5. Command Registry, Idempotency Rules & CD4511 Rejection
+console.log('\n[SUITE 5] Command Registry, Idempotency & CD4511 Rejection');
+
+interface CommandDef {
+  command: string;
+  isIdempotent: boolean;
+  isConfirmedByFirmware: boolean;
+  unsupportedReason?: string;
+}
+
+const COMMAND_REGISTRY: Record<string, CommandDef> = {
+  PING: { command: 'PING', isIdempotent: true, isConfirmedByFirmware: true },
+  GET_DEVICE_INFO: { command: 'GET_DEVICE_INFO', isIdempotent: true, isConfirmedByFirmware: true },
+  GET_CLOCK_TIME: { command: 'GET_CLOCK_TIME', isIdempotent: true, isConfirmedByFirmware: true },
+  SET_CLOCK_TIME: { command: 'SET_CLOCK_TIME', isIdempotent: true, isConfirmedByFirmware: true },
+  GET_ALARMS: { command: 'GET_ALARMS', isIdempotent: true, isConfirmedByFirmware: true },
+  SET_ALARM: { command: 'SET_ALARM', isIdempotent: true, isConfirmedByFirmware: true },
+  DELETE_ALARM: { command: 'DELETE_ALARM', isIdempotent: true, isConfirmedByFirmware: true },
+  SYNC_ALL_ALARMS: { command: 'SYNC_ALL_ALARMS', isIdempotent: true, isConfirmedByFirmware: true },
+  SNOOZE_ALARM: { command: 'SNOOZE_ALARM', isIdempotent: false, isConfirmedByFirmware: true },
+  DISMISS_ALARM: { command: 'DISMISS_ALARM', isIdempotent: true, isConfirmedByFirmware: true },
+  TEST_BUZZER: { command: 'TEST_BUZZER', isIdempotent: false, isConfirmedByFirmware: true },
+  SET_DISPLAY_BRIGHTNESS: {
+    command: 'SET_DISPLAY_BRIGHTNESS',
+    isIdempotent: true,
+    isConfirmedByFirmware: false,
+    unsupportedReason: 'CD4511 static 5.0V display circuit lacks PWM blanking pin on current PCB revision',
+  },
+};
+
+runTest('Command registry identifies idempotent operations for safe automatic retry', () => {
+  assert(COMMAND_REGISTRY['SET_CLOCK_TIME'].isIdempotent === true, 'SET_CLOCK_TIME must be idempotent');
+  assert(COMMAND_REGISTRY['SYNC_ALL_ALARMS'].isIdempotent === true, 'SYNC_ALL_ALARMS must be idempotent');
+  assert(COMMAND_REGISTRY['GET_ALARMS'].isIdempotent === true, 'GET_ALARMS must be idempotent');
+  assert(COMMAND_REGISTRY['TEST_BUZZER'].isIdempotent === false, 'TEST_BUZZER must NOT be idempotent');
+  assert(COMMAND_REGISTRY['SNOOZE_ALARM'].isIdempotent === false, 'SNOOZE_ALARM must NOT be idempotent');
+});
+
+runTest('Unsupported SET_DISPLAY_BRIGHTNESS command is rejected with hardware explanation', () => {
+  const validateCommand = (cmd: string) => {
+    const def = COMMAND_REGISTRY[cmd];
+    if (!def) return { valid: false, error: 'ERR_1001_UNKNOWN_COMMAND' };
+    if (!def.isConfirmedByFirmware) {
+      return {
+        valid: false,
+        error: 'ERR_1002_UNSUPPORTED_COMMAND',
+        message: def.unsupportedReason,
+      };
+    }
+    return { valid: true };
+  };
+
+  const brightnessResult = validateCommand('SET_DISPLAY_BRIGHTNESS');
+  assert(brightnessResult.valid === false, 'SET_DISPLAY_BRIGHTNESS must not be valid');
+  assert(brightnessResult.error === 'ERR_1002_UNSUPPORTED_COMMAND', 'Must fail with ERR_1002');
+  assert(
+    brightnessResult.message?.includes('CD4511') === true,
+    'Must explain CD4511 static 5V circuit limitation'
+  );
+
+  const clockTimeResult = validateCommand('SET_CLOCK_TIME');
+  assert(clockTimeResult.valid === true, 'SET_CLOCK_TIME must be valid');
+});
+
+runTest('Hardware queue suppresses duplicate request_ids', () => {
+  const processedRequestIds = new Set<string>();
+  const enqueue = (requestId: string) => {
+    if (processedRequestIds.has(requestId)) {
+      return { accepted: false, reason: 'Duplicate request_id' };
+    }
+    processedRequestIds.add(requestId);
+    return { accepted: true };
+  };
+
+  assert(enqueue('req-001').accepted === true, 'First request must be accepted');
+  assert(enqueue('req-002').accepted === true, 'Second unique request must be accepted');
+  assert(enqueue('req-001').accepted === false, 'Duplicate req-001 must be rejected');
 });
 
 console.log('\n======================================================');

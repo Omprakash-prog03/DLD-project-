@@ -150,14 +150,25 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                     <span>Download Release APK (v1.0.0)</span>
                   </a>
 
-                  <a
-                    href="/downloads/smart-clock-debug.apk"
-                    download="smart-clock-debug.apk"
-                    className="w-full py-2.5 px-4 bg-[#2A2A2A] hover:bg-neutral-700 text-neutral-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition"
-                  >
-                    <Download size={14} />
-                    <span>Download Debug APK</span>
-                  </a>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href="/downloads/smart-clock-debug.apk"
+                      download="smart-clock-debug.apk"
+                      className="py-2.5 px-3 bg-[#2A2A2A] hover:bg-neutral-700 text-neutral-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition text-center"
+                    >
+                      <Download size={13} />
+                      <span>Debug APK</span>
+                    </a>
+
+                    <a
+                      href="/downloads/smart-clock.aab"
+                      download="smart-clock.aab"
+                      className="py-2.5 px-3 bg-[#2A2A2A] hover:bg-neutral-700 text-neutral-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition text-center"
+                    >
+                      <Download size={13} />
+                      <span>App Bundle (AAB)</span>
+                    </a>
+                  </div>
                 </div>
               </div>
 
