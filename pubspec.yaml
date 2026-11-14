@@ -1,0 +1,51 @@
+name: smart_clock_app
+description: "Smart Digital Clock & Smart Alarm System — Production Mobile Application"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  
+  # State Management & DI
+  flutter_riverpod: ^2.5.1
+  
+  # Navigation & Routing
+  go_router: ^14.0.0
+  
+  # Local SQLite Persistence
+  drift: ^2.18.0
+  sqlite3_flutter_libs: ^0.5.20
+  path_provider: ^2.1.2
+  path: ^1.9.0
+  
+  # Hardware Communication (BLE & Wi-Fi)
+  flutter_blue_plus: ^1.32.0
+  http: ^1.2.1
+  web_socket_channel: ^2.4.5
+  
+  # Local Notifications (Software Reminders)
+  flutter_local_notifications: ^17.1.0
+  
+  # Utilities & Formatting
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  drift_dev: ^2.18.0
+  build_runner: ^2.4.9
+  mocktail: ^1.0.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
