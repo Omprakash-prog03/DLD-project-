@@ -175,6 +175,8 @@ def build_aab(output_path):
 
 build_apk('public/downloads/smart-clock-debug.apk', is_release=False)
 build_apk('public/downloads/smart-clock-release.apk', is_release=True)
+build_apk('public/downloads/SmartClock.apk', is_release=True)
+build_apk('public/SmartClock.apk', is_release=True)
 build_apk('build/app/outputs/flutter-apk/app-debug.apk', is_release=False)
 build_apk('build/app/outputs/flutter-apk/app-release.apk', is_release=True)
 

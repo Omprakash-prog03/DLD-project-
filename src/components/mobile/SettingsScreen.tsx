@@ -73,8 +73,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onOpenDownload }
               </div>
             </div>
             <a
-              href="/downloads/smart-clock-release.apk"
-              download="smart-clock-release.apk"
+              href="/SmartClock.apk"
+              download="SmartClock.apk"
               className="px-3.5 py-2 bg-[#E84B2F] hover:bg-[#d03d22] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition"
             >
               <Download size={13} />

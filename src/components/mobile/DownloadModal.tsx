@@ -189,12 +189,12 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
                 <div className="mt-4 space-y-2">
                   <a
-                    href="/downloads/smart-clock-release.apk"
-                    download="smart-clock-release.apk"
+                    href="/SmartClock.apk"
+                    download="SmartClock.apk"
                     className="w-full py-3.5 px-4 bg-[#E84B2F] hover:bg-[#d03d22] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.99]"
                   >
                     <Download size={18} />
-                    <span>Download Release APK (Recommended)</span>
+                    <span>Download SmartClock.apk (Release v1.0.0)</span>
                   </a>
 
                   <div className="grid grid-cols-2 gap-2">

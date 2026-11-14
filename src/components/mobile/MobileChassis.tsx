@@ -145,8 +145,8 @@ export const MobileChassis: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5">
             <a
-              href="/downloads/smart-clock-release.apk"
-              download="smart-clock-release.apk"
+              href="/SmartClock.apk"
+              download="SmartClock.apk"
               className="px-2.5 py-1 bg-[#E84B2F] hover:bg-[#d03d22] text-white rounded-lg font-bold flex items-center gap-1 text-[11px] shadow-sm active:scale-95 transition"
             >
               <Download size={11} />
