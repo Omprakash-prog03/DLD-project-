@@ -175,10 +175,20 @@ def build_aab(output_path):
 
 build_apk('public/downloads/smart-clock-debug.apk', is_release=False)
 build_apk('public/downloads/smart-clock-release.apk', is_release=True)
+build_apk('public/downloads/SmartClock-release.apk', is_release=True)
+build_apk('public/downloads/SmartClock-debug.apk', is_release=False)
 build_apk('public/downloads/SmartClock.apk', is_release=True)
+build_apk('public/SmartClock-release.apk', is_release=True)
+build_apk('public/SmartClock-debug.apk', is_release=False)
 build_apk('public/SmartClock.apk', is_release=True)
 build_apk('build/app/outputs/flutter-apk/app-debug.apk', is_release=False)
 build_apk('build/app/outputs/flutter-apk/app-release.apk', is_release=True)
 
 build_aab('public/downloads/smart-clock.aab')
 build_aab('build/app/outputs/bundle/release/app-release.aab')
+
+# Release asset folder for GitHub Releases
+build_apk('release-assets/SmartClock-release.apk', is_release=True)
+build_apk('release-assets/SmartClock-debug.apk', is_release=False)
+build_apk('release-assets/SmartClock.apk', is_release=True)
+build_aab('release-assets/SmartClock.aab')
