@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Download, X, QrCode, Smartphone, Apple, Check, Share, PlusSquare, ArrowDownToLine } from 'lucide-react';
+import {
+  Download,
+  X,
+  QrCode,
+  Smartphone,
+  Apple,
+  Check,
+  Share,
+  PlusSquare,
+  ArrowDownToLine,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+} from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface DownloadModalProps {
@@ -8,10 +21,17 @@ interface DownloadModalProps {
 }
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
+  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+  const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isMobile = isAndroid || isIOS;
+
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'apk' | 'pwa' | 'qr'>('apk');
+  const [activeTab, setActiveTab] = useState<'apk' | 'pwa' | 'qr'>(
+    isIOS ? 'pwa' : isAndroid ? 'apk' : 'qr'
+  );
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Generate QR code for the current URL
@@ -46,6 +66,26 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
+  const handleCopyLink = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    }
+  };
+
+  const handleShare = () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: 'Smart Clock Mobile App',
+        text: 'Download and install the Smart Clock mobile companion app for ESP32 + DS3231:',
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      handleCopyLink();
+    }
+  };
+
   const handleInstallPWA = async () => {
     if (installPrompt) {
       installPrompt.prompt();
@@ -55,22 +95,24 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
       }
       setInstallPrompt(null);
     } else {
-      alert('To install on your phone:\n• Android Chrome: Tap ⋮ menu -> "Add to Home screen" or "Install app".\n• iPhone Safari: Tap Share ⎋ -> "Add to Home Screen" ⊞.');
+      alert(
+        'To install on your phone:\n• Android Chrome: Tap ⋮ menu -> "Add to Home screen" or "Install app".\n• iPhone Safari: Tap Share ⎋ -> "Add to Home Screen" ⊞.'
+      );
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-[#171717] border border-[#2A2A2A] rounded-[32px] w-full max-w-[420px] overflow-hidden shadow-2xl animate-scale-up">
+      <div className="bg-[#171717] border border-[#2A2A2A] rounded-[32px] w-full max-w-[440px] overflow-hidden shadow-2xl animate-scale-up">
         {/* Header */}
         <div className="p-5 pb-3 flex items-center justify-between border-b border-[#2A2A2A]">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#E84B2F] flex items-center justify-center text-white">
-              <Smartphone size={20} />
+            <div className="w-10 h-10 rounded-2xl bg-[#E84B2F] flex items-center justify-center text-white shadow-md">
+              <Smartphone size={22} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white leading-tight">Install on Phone</h3>
-              <p className="text-xs text-neutral-400">Download APK or Install Mobile App</p>
+              <h3 className="text-lg font-bold text-white leading-tight">Install on Mobile Phone</h3>
+              <p className="text-xs text-neutral-400">Download APK, App Bundle, or Install PWA</p>
             </div>
           </div>
           <button
@@ -132,22 +174,27 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <div className="bg-[#1E1E1E] rounded-2xl p-4 border border-[#2A2A2A]">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="text-sm font-bold text-white">Smart Clock Android Package</h4>
-                    <p className="text-xs text-neutral-400 mt-0.5">Standalone Android installable package (.apk)</p>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>Smart Clock Android Package</span>
+                      <ShieldCheck size={14} className="text-[#2ECC71]" />
+                    </h4>
+                    <p className="text-xs text-neutral-400 mt-0.5">
+                      Signed standalone Android installer package (.apk)
+                    </p>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-[#2ECC71]/20 text-[#2ECC71] rounded-md">
-                    Ready
+                    v1.0.0
                   </span>
                 </div>
 
                 <div className="mt-4 space-y-2">
                   <a
-                    href="/downloads/smart-clock-release.apk"
-                    download="smart-clock-release.apk"
-                    className="w-full py-3 px-4 bg-[#E84B2F] hover:bg-[#d03d22] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.99]"
+                    href="/SmartClock.apk"
+                    download="SmartClock.apk"
+                    className="w-full py-3.5 px-4 bg-[#E84B2F] hover:bg-[#d03d22] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.99]"
                   >
-                    <Download size={16} />
-                    <span>Download Release APK (v1.0.0)</span>
+                    <Download size={18} />
+                    <span>Download SmartClock.apk (Release v1.0.0)</span>
                   </a>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -157,7 +204,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                       className="py-2.5 px-3 bg-[#2A2A2A] hover:bg-neutral-700 text-neutral-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition text-center"
                     >
                       <Download size={13} />
-                      <span>Debug APK</span>
+                      <span>Debug APK (Logs)</span>
                     </a>
 
                     <a
@@ -166,7 +213,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                       className="py-2.5 px-3 bg-[#2A2A2A] hover:bg-neutral-700 text-neutral-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition text-center"
                     >
                       <Download size={13} />
-                      <span>App Bundle (AAB)</span>
+                      <span>Play Bundle (AAB)</span>
                     </a>
                   </div>
                 </div>
@@ -176,14 +223,14 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <div className="bg-[#111111] rounded-2xl p-4 border border-[#2A2A2A] text-xs text-neutral-300 space-y-2">
                 <p className="font-bold text-white flex items-center gap-1.5">
                   <Smartphone size={14} className="text-[#E84B2F]" />
-                  <span>How to Install on Android:</span>
+                  <span>How to Install APK on Your Phone:</span>
                 </p>
-                <ol className="list-decimal list-inside space-y-1 text-neutral-400">
-                  <li>Tap <strong>Download Release APK</strong> above.</li>
-                  <li>When prompted by Android, tap <strong>Download anyway</strong>.</li>
-                  <li>Tap the downloaded file in your notification bar.</li>
-                  <li>Allow <em>"Install unknown apps"</em> for your browser if asked.</li>
-                  <li>Tap <strong>Install</strong>. The app icon will appear on your home screen!</li>
+                <ol className="list-decimal list-inside space-y-1.5 text-neutral-400">
+                  <li>Tap <strong>Download Release APK</strong> above on your Android phone.</li>
+                  <li>When prompted by Android, tap <strong>&quot;Download anyway&quot;</strong>.</li>
+                  <li>Open the downloaded file from notifications or your <strong>Downloads</strong> folder.</li>
+                  <li>If prompted, allow <em>&quot;Install unknown apps&quot;</em> for your browser.</li>
+                  <li>Tap <strong>Install</strong>. Launch <strong>Smart Clock</strong> from your home screen!</li>
                 </ol>
               </div>
             </div>
@@ -191,9 +238,9 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
           {/* TAB 2: QR CODE */}
           {activeTab === 'qr' && (
-            <div className="text-center space-y-3">
+            <div className="text-center space-y-3.5">
               <p className="text-xs text-neutral-300">
-                Scan with your phone&apos;s camera to immediately open and install the Smart Clock app directly on your phone:
+                Point your smartphone camera at this QR code to open and download the app directly on your phone:
               </p>
 
               {qrDataUrl ? (
@@ -206,7 +253,27 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                 </div>
               )}
 
-              <p className="text-[11px] text-neutral-400 font-mono break-all px-2">
+              <div className="flex items-center gap-2 justify-center">
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="px-3.5 py-1.5 bg-[#2A2A2A] hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                >
+                  {copied ? <Check size={13} className="text-[#2ECC71]" /> : <Copy size={13} />}
+                  <span>{copied ? 'Link Copied!' : 'Copy Mobile Link'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="px-3.5 py-1.5 bg-[#3B5BDB] hover:bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                >
+                  <Share size={13} />
+                  <span>Share with Phone</span>
+                </button>
+              </div>
+
+              <p className="text-[11px] text-neutral-400 font-mono break-all px-2 bg-[#111111] py-1.5 rounded-lg border border-[#2A2A2A]">
                 {typeof window !== 'undefined' ? window.location.href : ''}
               </p>
             </div>
@@ -222,17 +289,17 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                 <div>
                   <h4 className="text-sm font-bold text-white">Progressive Web App (PWA)</h4>
                   <p className="text-xs text-neutral-400 mt-1">
-                    Installs instantly on Android & iOS without an APK. Works offline, launches fullscreen, and stores clock alarms locally.
+                    Installs instantly on Android & iPhone without downloading files. Works offline, launches fullscreen, and communicates directly with your ESP32 clock.
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleInstallPWA}
-                  className="w-full py-3 px-4 bg-[#3B5BDB] hover:bg-blue-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.99]"
+                  className="w-full py-3.5 px-4 bg-[#3B5BDB] hover:bg-blue-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.99]"
                 >
                   <PlusSquare size={16} />
-                  <span>{isInstalled ? 'App Installed!' : 'Add to Home Screen / Install'}</span>
+                  <span>{isInstalled ? 'App Already Installed!' : 'Add to Home Screen / Install'}</span>
                 </button>
               </div>
 
@@ -244,7 +311,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                     <span>On iPhone (Safari):</span>
                   </p>
                   <p className="text-neutral-400">
-                    Tap the <strong>Share</strong> button <Share size={11} className="inline mx-0.5 text-blue-400" /> at bottom, then scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong> <PlusSquare size={11} className="inline mx-0.5" />.
+                    Tap the <strong>Share</strong> button <Share size={11} className="inline mx-0.5 text-blue-400" /> at the bottom bar, then scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong> <PlusSquare size={11} className="inline mx-0.5" />.
                   </p>
                 </div>
 

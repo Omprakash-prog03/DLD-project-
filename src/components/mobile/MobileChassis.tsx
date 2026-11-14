@@ -1,5 +1,16 @@
-import React, { useState } from 'react';
-import { Wifi, Battery, Signal, Smartphone, Maximize2, Minimize2, AlertTriangle, Download, ArrowDownToLine } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Wifi,
+  Battery,
+  Signal,
+  Smartphone,
+  Maximize2,
+  Minimize2,
+  AlertTriangle,
+  Download,
+  ArrowDownToLine,
+  QrCode,
+} from 'lucide-react';
 import { BottomNavigation, TabType } from './BottomNavigation';
 import { HomeScreen } from './HomeScreen';
 import { AlarmsScreen } from './AlarmsScreen';
@@ -16,6 +27,19 @@ export const MobileChassis: React.FC = () => {
   const { operatingMode, setOperatingMode, currentTime } = useAppStore();
 
   const isMock = operatingMode === 'simulation';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (
+        params.get('download') === '1' ||
+        params.get('download') === 'true' ||
+        window.location.pathname === '/download'
+      ) {
+        setIsDownloadModalOpen(true);
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col items-center justify-center p-0 md:p-6 select-none font-sans">
@@ -74,7 +98,14 @@ export const MobileChassis: React.FC = () => {
           <span>9:41</span>
 
           {/* Dynamic Island Pill */}
-          <div className="w-24 h-5 bg-black rounded-full mx-auto cursor-pointer" onClick={() => setIsDownloadModalOpen(true)} />
+          <div
+            className="w-24 h-5 bg-black rounded-full mx-auto cursor-pointer hover:opacity-80 transition flex items-center justify-center text-[10px] text-neutral-400 gap-1"
+            onClick={() => setIsDownloadModalOpen(true)}
+            title="Download App"
+          >
+            <Download size={10} className="text-[#E84B2F]" />
+            <span className="text-[9px] font-bold text-neutral-300">Install</span>
+          </div>
 
           {/* Status Icons */}
           <div className="flex items-center gap-1.5 text-white">
@@ -101,20 +132,34 @@ export const MobileChassis: React.FC = () => {
           </div>
         )}
 
-        {/* Mobile View Install Floating Bar (Mobile Viewport Only) */}
-        <div className="md:hidden bg-[#1E1E1E] border-b border-[#2A2A2A] px-4 py-2 flex items-center justify-between text-xs">
+        {/* Mobile View Download & Install Floating Bar (Mobile Viewport Only) */}
+        <div className="md:hidden bg-[#1A1A1A] border-b border-[#2A2A2A] px-3.5 py-2 flex items-center justify-between text-xs shrink-0 shadow-sm z-30">
           <div className="flex items-center gap-2">
-            <Smartphone size={16} className="text-[#E84B2F]" />
-            <span className="font-semibold text-white">Install App on Phone</span>
+            <div className="w-6 h-6 rounded-md bg-[#E84B2F]/20 text-[#E84B2F] flex items-center justify-center font-bold">
+              <Smartphone size={13} />
+            </div>
+            <div>
+              <span className="font-bold text-white block text-[12px] leading-tight">Smart Clock App</span>
+              <span className="text-[10px] text-neutral-400">Install standalone on phone</span>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsDownloadModalOpen(true)}
-            className="px-2.5 py-1 bg-[#E84B2F] text-white rounded-lg font-bold flex items-center gap-1 text-[11px]"
-          >
-            <ArrowDownToLine size={12} />
-            <span>Install</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <a
+              href="/SmartClock.apk"
+              download="SmartClock.apk"
+              className="px-2.5 py-1 bg-[#E84B2F] hover:bg-[#d03d22] text-white rounded-lg font-bold flex items-center gap-1 text-[11px] shadow-sm active:scale-95 transition"
+            >
+              <Download size={11} />
+              <span>APK</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsDownloadModalOpen(true)}
+              className="px-2.5 py-1 bg-[#2A2A2A] hover:bg-neutral-700 text-white rounded-lg font-bold flex items-center gap-1 text-[11px] active:scale-95 transition"
+            >
+              <span>Install</span>
+            </button>
+          </div>
         </div>
 
         {/* Main Screen Views */}
@@ -124,6 +169,7 @@ export const MobileChassis: React.FC = () => {
               onNavigate={(tab) => setCurrentTab(tab)}
               onOpenCreateAlarm={() => setCurrentTab('alarms')}
               onOpenCreateEvent={() => setCurrentTab('calendar')}
+              onOpenDownload={() => setIsDownloadModalOpen(true)}
             />
           )}
 
@@ -133,7 +179,9 @@ export const MobileChassis: React.FC = () => {
 
           {currentTab === 'device' && <DeviceScreen />}
 
-          {currentTab === 'settings' && <SettingsScreen />}
+          {currentTab === 'settings' && (
+            <SettingsScreen onOpenDownload={() => setIsDownloadModalOpen(true)} />
+          )}
         </main>
 
         {/* C11: Dedicated Bottom Navigation Bar */}

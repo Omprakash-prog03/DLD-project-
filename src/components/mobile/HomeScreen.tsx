@@ -1,18 +1,30 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { RefreshCw, Bell, Plus, CalendarPlus, ChevronRight, CheckCircle2 } from 'lucide-react';
+import {
+  RefreshCw,
+  Bell,
+  Plus,
+  CalendarPlus,
+  ChevronRight,
+  CheckCircle2,
+  Smartphone,
+  ArrowDownToLine,
+  Download,
+} from 'lucide-react';
 import { TabType } from './BottomNavigation';
 
 interface HomeScreenProps {
   onNavigate: (tab: TabType) => void;
   onOpenCreateAlarm: () => void;
   onOpenCreateEvent: () => void;
+  onOpenDownload?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigate,
   onOpenCreateAlarm,
   onOpenCreateEvent,
+  onOpenDownload,
 }) => {
   const {
     currentTime,
@@ -93,6 +105,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         <p className="text-white/80 text-[15px] font-medium mt-1">{dateString}</p>
         <p className="text-white/60 text-[12px] mt-0.5">Timezone: Asia/Kolkata • DS3231 RTC</p>
+      </div>
+
+      {/* Mobile App Download Card (Direct APK & PWA Install) */}
+      <div
+        onClick={onOpenDownload}
+        className="bg-gradient-to-r from-[#1E1E1E] to-[#252525] border border-[#2A2A2A] hover:border-[#E84B2F]/60 rounded-[24px] p-4 cursor-pointer transition-all active:scale-[0.99] flex items-center justify-between shadow-md"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-[#E84B2F] text-white flex items-center justify-center font-bold shadow-md shrink-0">
+            <Smartphone size={22} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-[15px] font-bold text-white">Install on Phone</h4>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 bg-[#2ECC71]/20 text-[#2ECC71] rounded-full uppercase tracking-wider">
+                APK • AAB • PWA
+              </span>
+            </div>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              Download for Android or install on iOS
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs font-bold text-[#E84B2F]">Get App</span>
+          <ChevronRight size={18} className="text-[#E84B2F]" />
+        </div>
       </div>
 
       {/* Block B — Dual Metric Row (50/50 Split, 110dp Height) */}
